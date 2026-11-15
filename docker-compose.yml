@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# FASE 1 · BASELINE INSEGURO (solo laboratorio local)
+# Reproduce las configuraciones por defecto peligrosas:
+#   - MongoDB sin --auth y con el puerto 27017 publicado en el host
+#   - Elasticsearch con xpack.security desactivado y el 9200 publicado
+#   - API FastAPI vulnerable (NoSQL Injection y búsqueda Lucene sin filtrar)
+#   - Sin TLS en ningún salto
+# NO desplegar fuera de un equipo de laboratorio.
+# Nota: la clave "version:" del enunciado está obsoleta en Compose v2 y se omite.
+# ---------------------------------------------------------------------------
+name: nosql-lab-inseguro
+
+services:
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]               # expuesto a todo el host (y a la LAN)
+    environment:
+      MONGO_INITDB_DATABASE: tienda      # sin usuario root => sin autenticación
+    volumes:
+      - ./init_mongo.js:/docker-entrypoint-initdb.d/init_mongo.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    ports: ["9200:9200"]                 # API REST abierta y sin autenticación
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  es-init:                               # carga el índice de prueba "articulos"
+    image: curlimages/curl:8.11.1
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    environment:
+      ES_URL: http://elasticsearch:9200
+    volumes:
+      - ./init_elastic.sh:/init_elastic.sh:ro
+    entrypoint: ["sh", "/init_elastic.sh"]
+    restart: "no"
+
+  fastapi-app:
+    build: ./fastapi-app
+    ports: ["8000:8000"]                 # HTTP en claro
+    depends_on:
+      mongo: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+    environment:
+      APP_MODULE: app.main_vulnerable:app
+      MONGO_HOST: mongo
+      MONGO_DATABASE: tienda
+      ELASTIC_HOST: elasticsearch

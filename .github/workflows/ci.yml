@@ -1,0 +1,43 @@
+# Integración continua (SDLC seguro): cada push valida código, dependencias e
+# infraestructura antes de que llegue al laboratorio.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencias
+        run: |
+          pip install -r fastapi-app/requirements.txt
+          pip install pytest==8.3.4 mongomock==4.3.0 httpx==0.28.1 bandit==1.8.0 pip-audit==2.7.3
+
+      - name: Tests (baseline vulnerable + API endurecida)
+        run: pytest -q tests
+
+      - name: SAST con Bandit (solo la API endurecida)
+        run: bandit -q -ll fastapi-app/app/main_secure.py
+
+      - name: Auditoría de dependencias (CVE conocidos)
+        run: pip-audit -r fastapi-app/requirements.txt
+
+      - name: Lint de scripts (ShellCheck)
+        run: shellcheck -S warning init_elastic.sh scripts/*.sh
+
+      - name: Validación de los docker-compose
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.yml config -q
+          docker compose -f docker-compose.secure.yml config -q

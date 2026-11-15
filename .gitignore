@@ -1,0 +1,11 @@
+# Secretos y material criptográfico: nunca en Git
+.env
+certs/
+# Resultados locales
+logs/
+backups/
+evidencias/*.txt
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
