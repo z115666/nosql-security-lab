@@ -79,6 +79,23 @@ docker compose -f docker-compose.secure.yml ps
 ./scripts/04_backups.sh             # mongodump por TLS + snapshot de Elasticsearch
 ```
 
+### Extensión cloud · MongoDB Atlas (clúster gratuito)
+Misma base `tienda`, ahora en un servicio gestionado y bastionado:
+
+| Control | Configuración en Atlas |
+|---|---|
+| Mínimo privilegio | usuario `app_tienda` con `readWrite` **solo** sobre `tienda` (el asistente propone `readWriteAnyDatabase`: se sustituye) |
+| Exposición de red | lista de IP permitidas con **una única IP** (nunca `0.0.0.0/0`) |
+| Cifrado | TLS obligatorio en tránsito; cifrado en reposo gestionado por Atlas |
+| Identidad del panel | cuenta Atlas con MFA; los usuarios de BD solo se crean desde el panel |
+| Región | UE (RGPD: residencia de datos) |
+
+```bash
+cp .env.atlas.example .env.atlas    # rellena ATLAS_HOST, ATLAS_USER y ATLAS_PASSWORD
+./scripts/05_atlas.sh               # carga el dataset y verifica 12 controles (PASS/FAIL)
+```
+Limitaciones del plan gratuito: no admite auditoría de base de datos ni descarga de logs (requieren un clúster dedicado).
+
 Cada script imprime fecha, comando y resultado, y guarda una copia en `evidencias/`.
 `03_verify_secure.sh` termina con una tabla PASS/FAIL y la guarda en `evidencias/03_verify_resumen_*.txt`.
 
@@ -129,7 +146,7 @@ al azar en `.env`.
 │   ├── Dockerfile               # Python 3.11, usuario sin privilegios
 │   ├── requirements.txt         # versiones fijadas y auditadas
 │   └── app/{main_vulnerable,main_secure}.py
-├── scripts/                     # 00-04 por fases, gen_certs, gen_env
+├── scripts/                     # 00-05 por fases (05 = Atlas), gen_certs, gen_env
 ├── tests/                       # pytest: el baseline es explotable y la versión segura no
 ├── evidencias/                  # salidas fechadas de los scripts
 └── .github/workflows/ci.yml     # tests, Bandit, pip-audit, ShellCheck, compose config
@@ -148,6 +165,7 @@ dependencias (pip-audit), lint de scripts (ShellCheck) y validación de los dos 
   `docker compose -f docker-compose.secure.yml down -v` y vuelve a levantar.
 - **Windows:** usa Git Bash o WSL; si no existe `python3`, los scripts usan `python`.
 - **Windows · `curl` devuelve 000 en la verificación:** es Schannel intentando comprobar la revocación de la CA local. `03_verify_secure.sh` lo detecta y añade `--ssl-no-revoke` automáticamente (mantiene la validación de la cadena contra `certs/ca.crt`).
+
 ## Autor
 
 Alberto Alba Sánchez · Grado en Ciberseguridad (UNIR) · Seguridad en Bases de Datos, Blockchain y Big Data.

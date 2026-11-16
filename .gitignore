@@ -1,5 +1,6 @@
 # Secretos y material criptográfico: nunca en Git
 .env
+.env.atlas
 certs/
 # Resultados locales
 logs/

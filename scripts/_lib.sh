@@ -22,7 +22,7 @@ step()   { echo; echo "${B}--- $* ---${N}"; }
 # mask: oculta secretos de .env y tokens JWT en lo que se imprime (capturas sin credenciales)
 mask() {
   local s="$*" v
-  for v in MONGO_ROOT_PASSWORD MONGO_APP_PASSWORD ELASTIC_PASSWORD ES_APP_PASSWORD JWT_SECRET; do
+  for v in MONGO_ROOT_PASSWORD MONGO_APP_PASSWORD ELASTIC_PASSWORD ES_APP_PASSWORD JWT_SECRET ATLAS_PASSWORD; do
     [[ -n "${!v:-}" ]] && s=${s//${!v}/****}
   done
   printf '%s\n' "$s" | sed -E 's/(eyJ[A-Za-z0-9_-]{8})[A-Za-z0-9._-]*/\1…/g'
