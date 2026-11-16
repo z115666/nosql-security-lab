@@ -6,7 +6,15 @@ source "$(dirname "$0")/_lib.sh"
 set -a; source .env; set +a
 DC="docker compose -f docker-compose.secure.yml"
 API=https://$TARGET_HOST:8443
-CURL="curl -s --cacert certs/ca.crt"
+# En Windows (Git Bash/MSYS) el motor TLS nativo (Schannel) intenta comprobar la
+# revocación (CRL/OCSP) de la CA local autofirmada y falla con código 000
+# ("schannel: the revocation status is unknown"). --ssl-no-revoke omite SOLO esa
+# consulta externa; la validación de la cadena contra certs/ca.crt se mantiene.
+NOREVOKE=""
+case "${OS:-}${MSYSTEM:-}$(uname -s 2>/dev/null)" in
+  *Windows*|*MINGW*|*MSYS*|*UCRT*) NOREVOKE="--ssl-no-revoke" ;;
+esac
+CURL="curl -s --cacert certs/ca.crt $NOREVOKE"
 J='-H Content-Type:application/json'
 STAMP=$(date +%Y%m%d_%H%M%S)
 exec > >(tee "evidencias/03_verify_$STAMP.txt") 2>&1
