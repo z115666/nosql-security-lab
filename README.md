@@ -147,7 +147,7 @@ dependencias (pip-audit), lint de scripts (ShellCheck) y validación de los dos 
 - **Cambié `.env` después de arrancar:** los usuarios se crean solo la primera vez; haz
   `docker compose -f docker-compose.secure.yml down -v` y vuelve a levantar.
 - **Windows:** usa Git Bash o WSL; si no existe `python3`, los scripts usan `python`.
-
+- **Windows · `curl` devuelve 000 en la verificación:** es Schannel intentando comprobar la revocación de la CA local. `03_verify_secure.sh` lo detecta y añade `--ssl-no-revoke` automáticamente (mantiene la validación de la cadena contra `certs/ca.crt`).
 ## Autor
 
 Alberto Alba Sánchez · Grado en Ciberseguridad (UNIR) · Seguridad en Bases de Datos, Blockchain y Big Data.
